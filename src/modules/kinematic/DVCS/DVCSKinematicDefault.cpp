@@ -175,6 +175,22 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
                         << conditions.toString());
     }
 
+    TVector3 boost_TAR_to_PTAR = p_TAR.getFourMomentum().BoostVector();
+    // For incoherent pDVCS in D
+    if(ParticleType(conditions.getHadronType()).toString() == "d")
+      {
+	//throw random fermi momentum
+       	ParticleType protonType = ParticleType(protonType.fromString("p"));
+	double mass = protonType.getMass();
+	Particle proton_TRF(protonType, TVector3(0., 0., 1.), mass);
+
+	//change the definition of the TRF
+	boost_TAR_to_PTAR = proton_TRF.getFourMomentum().BoostVector();
+	e_TAR.boost(-boost_TAR_to_PTAR);
+	p_TAR.boost(-boost_TAR_to_PTAR);
+      }
+    
+
     double xB = Q2 / (2 * y * Mp * e_TAR.getEnergy());
 
     if (xB
@@ -346,6 +362,14 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     Particle gammaStar_LAB = gammaStar_TAR;
     Particle exclusive_LAB = exclusive_TAR;
     Particle pS_LAB = pS_TAR;
+
+    if (ParticleType(conditions.getHadronType()).toString() == "d")
+      {
+	eS_LAB.boost(boost_TAR_to_PTAR);
+	gammaStar_LAB.boost(boost_TAR_to_PTAR);
+	exclusive_LAB.boost(boost_TAR_to_PTAR);
+	pS_LAB.boost(boost_TAR_to_PTAR);
+      }
 
     eS_LAB.boost(boost_LAB_to_TAR);
     gammaStar_LAB.boost(boost_LAB_to_TAR);
