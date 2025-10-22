@@ -25,7 +25,8 @@
 #include "../../../../include/beans/types/AxisType.h"
 #include "../../../../include/beans/types/ParticleCodeType.h"
 #include "../../../../include/beans/types/ParticleType.h"
-
+#include "fmotion.cpp"
+#include <TRandom3.h>
 namespace EPIC {
 
 const unsigned int DVCSKinematicDefault::classId =
@@ -180,9 +181,18 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     if(ParticleType(conditions.getHadronType()).toString() == "d")
       {
 	//throw random fermi momentum
+	int ifermi(1);
+	TRandom3 rndm;
+	double P = fer_mom_deut(ifermi, rndm.Rndm());
+	double theta = TMath::Pi()*rndm.Rndm();
+	double phi = 2*TMath::Pi()*rndm.Rndm();
+	double px = P * sin(theta) * cos(phi);
+	double py = P * sin(theta) * sin(phi);
+	double pz = P * cos(theta);
+	  
        	ParticleType protonType = ParticleType(protonType.fromString("p"));
 	double mass = protonType.getMass();
-	Particle proton_TRF(protonType, TVector3(0., 0., 1.), mass);
+	Particle proton_TRF(protonType, TVector3(px, py, pz), TMath::Sqrt(mass*mass+P*P));
 
 	//change the definition of the TRF
 	boost_TAR_to_PTAR = proton_TRF.getFourMomentum().BoostVector();
