@@ -25,7 +25,7 @@
 #include "../../../../include/beans/types/AxisType.h"
 #include "../../../../include/beans/types/ParticleCodeType.h"
 #include "../../../../include/beans/types/ParticleType.h"
-#include "fmotion.cpp"
+#include "../../../../include/modules/kinematic/DVCS/fmotion.h"
 #include <TRandom3.h>
 namespace EPIC {
 

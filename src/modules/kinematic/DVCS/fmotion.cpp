@@ -1,3 +1,6 @@
+#include <cmath>
+#include "../include/modules/kinematic/DVCS/fmotion.h"
+
 double fer_mom_deut(int ifermi, double rndm)
 {
   int    i(1);
@@ -105,7 +108,7 @@ double fer_mom_deut(int ifermi, double rndm)
   else
     {
       slo = log(spro[ifermi][i]) - log(spro[ifermi][i-1]);
-      sfp = log(u1)              - log(spro[ifermi][i-1]);
+      sfp = log(u1) - log(spro[ifermi][i-1]);
       imp = star[ifermi] + (i-2)*slop[ifermi] + (slop[ifermi]*sfp/slo);
     }
   
