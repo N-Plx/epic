@@ -50,7 +50,10 @@ public:
             const DVCSKinematic &kin);
 
     virtual Event evaluate(const ExperimentalConditions &conditions,
-            const DVCSKinematic &kin);
+			   const DVCSKinematic &kin);
+  
+  virtual Event evaluate(const ExperimentalConditions &conditions,
+			 const DVCSKinematic &kin, TVector3 activeMomentum);
 };
 
 } /* namespace EPIC */

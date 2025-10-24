@@ -28,7 +28,7 @@
 #include <memory>
 #include <tuple>
 #include <utility>
-
+#include<TRandom3.h>
 #include "../../include/automation/MonteCarloTask.h"
 #include "../../include/beans/containers/KinematicRange.h"
 #include "../../include/beans/types/EventAttributeType.h"
@@ -38,7 +38,8 @@
 #include "../../include/modules/event_generator/EventGeneratorModule.h"
 #include "../../include/modules/radiative_corrections/RCModule.h"
 #include "../../include/modules/writer/WriterModule.h"
-
+#include "../../include/modules/kinematic/DVCS/fmotion.h"
+using namespace std;
 namespace EPIC {
 
 const std::string DVCSGeneratorService::DVCS_GENERATOR_SERVICE_SUBPROCESSTYPE =
@@ -170,8 +171,10 @@ void DVCSGeneratorService::run() {
     //loop over events
     m_debugTimeGeneration.first = std::chrono::steady_clock::now();
 
+    TRandom3 rndm;
+    
     for (size_t i = 0; i < m_generalConfiguration.getNEvents(); i++) {
-
+      
         //generate kinematics
         std::pair<std::vector<double>, double> eventVec =
                 m_pEventGeneratorModule->generateEvent();
@@ -197,9 +200,23 @@ void DVCSGeneratorService::run() {
                 m_pRCModule->evaluate(m_experimentalConditions, partonsKinObs,
                         rcVariables);
 
-        //create event
-        Event event = m_pKinematicModule->evaluate(std::get<1>(rcTrue),
-                std::get<2>(rcTrue));
+	double px_active = 0, py_active = 0, pz_active = 0;
+	if(m_experimentalConditions.getNucleusType() == 45)
+	  {
+	    //Throw random Fermi motion
+	    int ifermi(1);
+	    double P_active = fer_mom_deut(ifermi, rndm.Rndm());
+	    double theta_active = M_PI*rndm.Rndm();
+	    double phi_active = 2*M_PI*rndm.Rndm();
+	    px_active = P_active * sin(theta_active) * cos(phi_active);
+	    py_active = P_active * sin(theta_active) * sin(phi_active);
+	    pz_active = P_active * cos(theta_active);
+	  }
+	TVector3 activeMomentum(px_active,py_active,pz_active);
+	//create event
+	Event event = m_pKinematicModule->evaluate(std::get<1>(rcTrue),
+						   std::get<2>(rcTrue),
+						   activeMomentum);
 
         //rc
         m_pRCModule->updateEvent(event, rcVariables);

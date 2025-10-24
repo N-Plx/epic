@@ -9,7 +9,7 @@
 #define MODULES_KINEMATIC_DVCS_DVCSKINEMATICMODULE_H_
 
 #include <string>
-
+#include <TVector3.h>
 #include "../../../beans/containers/DVCSKinematicRanges.h"
 #include "../../../beans/containers/DVCSKinematic.h"
 #include "../KinematicModule.h"
@@ -52,6 +52,8 @@ public:
 
     virtual Event evaluate(const ExperimentalConditions &conditions,
             const DVCSKinematic &kin) = 0;
+  virtual Event evaluate(const ExperimentalConditions &conditions,
+                         const DVCSKinematic &kin, TVector3 activeMomentum)=0;
 
 protected:
     virtual void initModule();

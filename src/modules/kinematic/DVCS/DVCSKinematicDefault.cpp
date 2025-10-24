@@ -16,7 +16,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-
+#include <TRandom3.h>
 #include "../../../../include/beans/containers/DVCSKinematic.h"
 #include "../../../../include/beans/containers/ExperimentalConditions.h"
 #include "../../../../include/beans/physics/Particle.h"
@@ -26,7 +26,7 @@
 #include "../../../../include/beans/types/ParticleCodeType.h"
 #include "../../../../include/beans/types/ParticleType.h"
 #include "../../../../include/modules/kinematic/DVCS/fmotion.h"
-#include <TRandom3.h>
+
 namespace EPIC {
 
 const unsigned int DVCSKinematicDefault::classId =
@@ -135,7 +135,13 @@ bool DVCSKinematicDefault::checkIfValid(
 }
 
 Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
-        const DVCSKinematic &kin) {
+                                     const DVCSKinematic &kin) {
+  TVector3 activeMomentum(0,0,0);
+  return evaluate(conditions,kin,activeMomentum);
+}
+
+Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
+				     const DVCSKinematic &kin, TVector3 activeMomentum) {
 
     // variables
     double Ee = conditions.getLeptonEnergy();
@@ -178,17 +184,12 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 
     TVector3 boost_TAR_to_PTAR = p_TAR.getFourMomentum().BoostVector();
     // For incoherent pDVCS in D
-    if(ParticleType(conditions.getHadronType()).toString() == "d")
-      {
-	//throw random fermi momentum
-	int ifermi(1);
-	TRandom3 rndm;
-	double P = fer_mom_deut(ifermi, rndm.Rndm());
-	double theta = TMath::Pi()*rndm.Rndm();
-	double phi = 2*TMath::Pi()*rndm.Rndm();
-	double px = P * sin(theta) * cos(phi);
-	double py = P * sin(theta) * sin(phi);
-	double pz = P * cos(theta);
+    if(conditions.getNucleusType() == 45)
+      {	
+	double px = activeMomentum.X();
+	double py = activeMomentum.Y();
+	double pz = activeMomentum.Z();
+	double P = sqrt(px*px+py*py+pz*pz);
 	  
        	ParticleType protonType = ParticleType(protonType.fromString("p"));
 	double mass = protonType.getMass();
@@ -367,13 +368,12 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 	pS_TAR.rotate(AxisType::Z, psi);
 
     // 10. Back to LAB
-
     Particle eS_LAB = eS_TAR;
     Particle gammaStar_LAB = gammaStar_TAR;
     Particle exclusive_LAB = exclusive_TAR;
     Particle pS_LAB = pS_TAR;
 
-    if (ParticleType(conditions.getHadronType()).toString() == "d")
+    if (conditions.getNucleusType() == 45)
       {
 	eS_LAB.boost(boost_TAR_to_PTAR);
 	gammaStar_LAB.boost(boost_TAR_to_PTAR);

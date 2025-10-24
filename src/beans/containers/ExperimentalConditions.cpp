@@ -31,6 +31,8 @@ const std::string ExperimentalConditions::EXPERIMENTAL_CONDITION_HADRON_ENERGY =
         "hadron_energy";
 const std::string ExperimentalConditions::EXPERIMENTAL_CONDITION_HADRON_PARTICLE =
         "hadron_type";
+const std::string ExperimentalConditions::EXPERIMENTAL_CONDITION_NUCLEUS_TYPE =
+        "nucleus_type";
 const std::string ExperimentalConditions::EXPERIMENTAL_CONDITION_HADRON_POLARISATION =
         "hadron_polarisation";
 
@@ -38,16 +40,16 @@ ExperimentalConditions::ExperimentalConditions() :
         PARTONS::BaseObject("ExperimentalConditions"), m_leptonEnergy(0.), m_leptonType(
                 ParticleType::UNDEFINED), m_leptonHelicity(0), m_hadronEnergy(
                 0.), m_hadronType(ParticleType::UNDEFINED), m_hadronPolarisation(
-                NumA::Vector3D(0., 0., 0.)) {
+                NumA::Vector3D(0., 0., 0.)), m_nucleusType(2212) {
 }
 
 ExperimentalConditions::ExperimentalConditions(double leptonEnergy,
         ParticleType::Type leptonType, int leptonHelicity, double hadronEnergy,
-        ParticleType::Type hadronType, const NumA::Vector3D &hadronPolarisation) :
+        ParticleType::Type hadronType, const NumA::Vector3D &hadronPolarisation, int nucleusType) :
         PARTONS::BaseObject("ExperimentalConditions"), m_leptonEnergy(
                 leptonEnergy), m_leptonType(leptonType), m_leptonHelicity(
                 leptonHelicity), m_hadronEnergy(hadronEnergy), m_hadronType(
-                hadronType), m_hadronPolarisation(hadronPolarisation) {
+                hadronType), m_hadronPolarisation(hadronPolarisation),m_nucleusType(nucleusType) {
 }
 
 ExperimentalConditions::ExperimentalConditions(
@@ -55,7 +57,7 @@ ExperimentalConditions::ExperimentalConditions(
         PARTONS::BaseObject(other), m_leptonEnergy(other.m_leptonEnergy), m_leptonType(
                 other.m_leptonType), m_leptonHelicity(other.m_leptonHelicity), m_hadronEnergy(
                 other.m_hadronEnergy), m_hadronType(other.m_hadronType), m_hadronPolarisation(
-                other.m_hadronPolarisation) {
+                other.m_hadronPolarisation), m_nucleusType(other.m_nucleusType) {
 }
 
 ExperimentalConditions::~ExperimentalConditions() {
@@ -80,6 +82,9 @@ std::string ExperimentalConditions::toString() const {
     formatter << "Experimental condition hadron polarisation: "
             << m_hadronPolarisation.toString();
 
+    formatter << "Experimental condition nucleus type: "
+              << std::to_string(m_nucleusType);
+    
     formatter << "Experimental condition fixed target lepton energy equivalent: "
             << getLeptonEnergyFixedTargetEquivalent() << " [GeV]\n";
 
@@ -139,6 +144,21 @@ ExperimentalConditions ExperimentalConditions::fromTask(
                 ElemUtils::Formatter()
                         << "Experimental conditions missing for key "
                         << ExperimentalConditions::EXPERIMENTAL_CONDITION_HADRON_PARTICLE);
+    }
+
+    // nucleus type
+    if (data.isAvailable(
+            ExperimentalConditions::EXPERIMENTAL_CONDITION_NUCLEUS_TYPE)) {
+
+	std::string valueString = data.getLastAvailable().getString();
+        ElemUtils::StringUtils::trimAll(valueString);
+
+	result.setNucleusType(std::stoi(valueString));
+    } else {
+        throw ElemUtils::CustomException("ExperimentalConditions", __func__,
+		ElemUtils::Formatter()
+                        << "Experimental conditions missing for key "
+                        << ExperimentalConditions::EXPERIMENTAL_CONDITION_NUCLEUS_TYPE);
     }
 
     // hadron polarisation
@@ -234,6 +254,14 @@ ParticleType::Type ExperimentalConditions::getHadronType() const {
 
 void ExperimentalConditions::setHadronType(ParticleType::Type hadronType) {
     m_hadronType = hadronType;
+}
+
+int ExperimentalConditions::getNucleusType() const {
+    return m_nucleusType;
+}
+
+void ExperimentalConditions::setNucleusType(int nucleusType) {
+    m_nucleusType = nucleusType;
 }
 
 const NumA::Vector3D &ExperimentalConditions::getHadronPolarisation() const {

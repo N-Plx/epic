@@ -39,6 +39,8 @@ class ExperimentalConditions : public PARTONS::BaseObject {
   static const std::string
       EXPERIMENTAL_CONDITION_HADRON_PARTICLE; ///< Key to set hadron particle.
   static const std::string
+      EXPERIMENTAL_CONDITION_NUCLEUS_TYPE; ///< Key to set nucleus type.
+  static const std::string
       EXPERIMENTAL_CONDITION_HADRON_POLARISATION; ///< Key to set hadron
                                                   /// polarisation.
 
@@ -54,7 +56,8 @@ public:
   ExperimentalConditions(double leptonEnergy, ParticleType::Type leptonType,
                          int leptonHelicity, double hadronEnergy,
                          ParticleType::Type hadronType,
-                         const NumA::Vector3D &hadronPolarisation);
+                         const NumA::Vector3D &hadronPolarisation,
+			 int nucleusType);
 
   /**
    * Copy constructor.
@@ -133,6 +136,16 @@ public:
   void setHadronType(ParticleType::Type hadronType);
 
   /**
+   * Get nucleus type.
+   */
+  int getNucleusType() const;
+
+  /**
+   * Set nucleus type.
+   */
+  void setNucleusType(int nucleusType);
+  
+  /**
    * Get hadron polarisation.
    */
   const NumA::Vector3D &getHadronPolarisation() const;
@@ -150,6 +163,7 @@ private:
   double m_hadronEnergy;               ///< Hadron energy.
   ParticleType::Type m_hadronType;     ///< Hadron type.
   NumA::Vector3D m_hadronPolarisation; ///< Hadron polarisation.
+  int m_nucleusType;///<Nucleus type.
 };
 
 } /* namespace EPIC */
