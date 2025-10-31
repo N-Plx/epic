@@ -53,7 +53,7 @@ public:
 			   const DVCSKinematic &kin);
   
   virtual Event evaluate(const ExperimentalConditions &conditions,
-			 const DVCSKinematic &kin, TVector3 activeMomentum);
+			 const DVCSKinematic &kin, TVector3 activeMomentum, bool &wrong_tmin_tamx);
 };
 
 } /* namespace EPIC */

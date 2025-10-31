@@ -172,6 +172,8 @@ void DVCSGeneratorService::run() {
     m_debugTimeGeneration.first = std::chrono::steady_clock::now();
 
     TRandom3 rndm;
+
+    int count_wrong_tmin_tmax = 0;
     
     for (size_t i = 0; i < m_generalConfiguration.getNEvents(); i++) {
       
@@ -214,10 +216,13 @@ void DVCSGeneratorService::run() {
 	  }
 	TVector3 activeMomentum(px_active,py_active,pz_active);
 	//create event
+	bool wrong_tmin_tmax=false;
 	Event event = m_pKinematicModule->evaluate(std::get<1>(rcTrue),
 						   std::get<2>(rcTrue),
-						   activeMomentum);
+						   activeMomentum,
+						   wrong_tmin_tmax);
 
+	if(wrong_tmin_tmax) {count_wrong_tmin_tmax++;continue;}
         //rc
         m_pRCModule->updateEvent(event, rcVariables);
 
@@ -229,6 +234,7 @@ void DVCSGeneratorService::run() {
         m_pWriterModule->write(event);
     }
 
+    std::cout << count_wrong_tmin_tmax << " events did not pass the tmin/tmax checks and were discarded " << std::endl;
     m_debugTimeGeneration.second = std::chrono::steady_clock::now();
 
     //general configuration

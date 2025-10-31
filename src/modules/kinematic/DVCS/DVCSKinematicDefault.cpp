@@ -26,7 +26,7 @@
 #include "../../../../include/beans/types/ParticleCodeType.h"
 #include "../../../../include/beans/types/ParticleType.h"
 #include "../../../../include/modules/kinematic/DVCS/fmotion.h"
-
+using namespace std;
 namespace EPIC {
 
 const unsigned int DVCSKinematicDefault::classId =
@@ -137,13 +137,14 @@ bool DVCSKinematicDefault::checkIfValid(
 Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
                                      const DVCSKinematic &kin) {
   TVector3 activeMomentum(0,0,0);
-  return evaluate(conditions,kin,activeMomentum);
+  bool wrong;
+  return evaluate(conditions,kin,activeMomentum,wrong);
 }
 
 Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
-				     const DVCSKinematic &kin, TVector3 activeMomentum) {
+				     const DVCSKinematic &kin, TVector3 activeMomentum, bool &wrong_tmin_tmax) {
 
-    // variables
+  // variables
     double Ee = conditions.getLeptonEnergy();
     double Ep = conditions.getHadronEnergy();
     ParticleType::Type beamType = conditions.getLeptonType();
@@ -189,8 +190,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 	double px = activeMomentum.X();
 	double py = activeMomentum.Y();
 	double pz = activeMomentum.Z();
-	double P = sqrt(px*px+py*py+pz*pz);
-	  
+	double P = sqrt(px*px+py*py+pz*pz); 
        	ParticleType protonType = ParticleType(protonType.fromString("p"));
 	double mass = protonType.getMass();
 	Particle proton_TRF(protonType, TVector3(px, py, pz), TMath::Sqrt(mass*mass+P*P));
@@ -198,15 +198,21 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 	//change the definition of the TRF
 	boost_TAR_to_PTAR = proton_TRF.getFourMomentum().BoostVector();
 	e_TAR.boost(-boost_TAR_to_PTAR);
-	p_TAR.boost(-boost_TAR_to_PTAR);
+	//p_TAR.boost(-boost_TAR_to_PTAR);//p_TAR is already defined as a proton at rest
       }
-    
+
+    if (y < 0. || y > 1.) {
+        throw ElemUtils::CustomException(getClassName(), __func__,
+                ElemUtils::Formatter() << "Kinematics not valid, kinematics: "
+                        << kin.toString() << " experimental conditions"
+                        << conditions.toString());
+    }
 
     double xB = Q2 / (2 * y * Mp * e_TAR.getEnergy());
 
     if (xB
             < 2 * Q2 * e_TAR.getEnergy() / Mp
-                    / (4 * pow(e_TAR.getEnergy(), 2) - Q2)) {
+	/ (4 * pow(e_TAR.getEnergy(), 2) - Q2)) {
         throw ElemUtils::CustomException(getClassName(), __func__,
                 ElemUtils::Formatter() << "Kinematics not valid, kinematics: "
                         << kin.toString() << " experimental conditions"
@@ -227,12 +233,11 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 
     Particle eS_TAR(beamType, e_TAR.getMomentum().Unit(), E_eS_TAR);
     eS_TAR.rotate(AxisType::Y, acos(cosTheta_eS_TAR));
-
+    
     // 4. Virtual photon
-
     Particle gammaStar_TAR(ParticleType::PHOTON,
             e_TAR.getFourMomentum() - eS_TAR.getFourMomentum());
-
+    
     // 5. Evaluate tmin and tmax
     // see: http://pdg.lbl.gov/2018/reviews/rpp2018-rev-kinematics.pdf
 
@@ -254,24 +259,49 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
             - pow(p1cm - p3cm, 2);
     double tmax = pow((m1_2 - m3_2 - m2_2 + m4_2) / (2 * sqrt(s4)), 2)
             - pow(p1cm + p3cm, 2);
-
+    
     if (t > tmin || t < tmax) {
+      if(conditions.getNucleusType() == 45)
+	{
+	  wrong_tmin_tmax=true;
+	  Event event;
+	  return event;
+	}
+      else
         throw ElemUtils::CustomException(getClassName(), __func__,
                 ElemUtils::Formatter() << "Kinematics not valid, kinematics: "
                         << kin.toString() << " experimental conditions"
                         << conditions.toString());
     }
+    else wrong_tmin_tmax=false;
 
     // 6. Rotate so that virtual photon goes along Z direction and boost to CMS
 
+    //Starting from target rest frame
     Particle gammaStar_GP = gammaStar_TAR;
     Particle p_GP = p_TAR;
-
-    // angle
-    double angle_TAR_to_GP = gammaStar_TAR.getAngle(AxisType::Z);
-
-    gammaStar_GP.rotate(AxisType::Y, -angle_TAR_to_GP);
-    p_GP.rotate(AxisType::Y, -angle_TAR_to_GP);
+    //rotation axis = unit vector x z
+    TVector3 gammaStar_TAR_normal = gammaStar_TAR.getMomentum().Unit();
+    TVector3 zAxis(0, 0, 1);
+    TVector3 axis = gammaStar_TAR_normal.Cross(zAxis);
+    double sinAngle = axis.Mag();
+    double cosAngle = gammaStar_TAR_normal.Dot(zAxis);
+    double angle_TAR_to_GP=0;
+    if (sinAngle < 1e-8) {
+      if (cosAngle > 0) {
+        // Already aligned with +Z
+      } else {
+	// Opposite direction (pointing to -Z)
+	// Rotate 180 around X (or any axis perpendicular to Z)
+        gammaStar_GP.rotate(AxisType::X, M_PI);
+	p_GP.rotate(AxisType::X, M_PI);
+      }
+    } else {
+      axis = axis.Unit();
+      angle_TAR_to_GP = atan2(sinAngle, cosAngle);
+      gammaStar_GP.rotate(axis,angle_TAR_to_GP);
+      p_GP.rotate(axis,angle_TAR_to_GP);
+    }
 
     // boost
     TVector3 boost_TAR_to_GP = (gammaStar_GP.getFourMomentum()
@@ -282,7 +312,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 
     // 7. Scattered proton and exclusive particle
     // see: https://link.springer.com/content/pdf/bbm%3A978-3-319-60498-5%2F1.pdf
-
+    
     // s in CMS
 
     double p_exclusive_GP = sqrt((pow(s4 - pow(Mp, 2), 2)) / (4 * s4));
@@ -297,7 +327,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 
     double E_pS_GP = pS_GP.getEnergy();
     double p_pS_GP = pS_GP.getMomentum().Mag();
-
+    
     double cosTheta_exclusive_GP = (t - pow(E_p_GP - E_pS_GP, 2)
             + pow(p_p_GP, 2) + pow(p_pS_GP, 2)) / (2 * p_p_GP * p_pS_GP);
 
@@ -315,9 +345,11 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     pS_TAR.boost(boost_TAR_to_GP);
 
     // rotate
-    exclusive_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
-    pS_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
-
+    //exclusive_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
+    //pS_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
+    exclusive_TAR.rotate(axis,angle_TAR_to_GP);
+    pS_TAR.rotate(axis,angle_TAR_to_GP);
+    
     // 9. Introduce phi angle
 
     pS_TAR.rotate(gammaStar_TAR.getMomentum().Unit(), phi);
@@ -362,30 +394,39 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
 		psi = phiS;
 	}
 
-	eS_TAR.rotate(AxisType::Z, psi);
-	gammaStar_TAR.rotate(AxisType::Z, psi);
-	exclusive_TAR.rotate(AxisType::Z, psi);
-	pS_TAR.rotate(AxisType::Z, psi);
+	TVector3 beamDir = e_TAR.getMomentum().Unit();
+	eS_TAR.rotate(beamDir, psi);
+        gammaStar_TAR.rotate(beamDir, psi);
+        exclusive_TAR.rotate(beamDir, psi);
+        pS_TAR.rotate(beamDir, psi);
+	
 
     // 10. Back to LAB
     Particle eS_LAB = eS_TAR;
     Particle gammaStar_LAB = gammaStar_TAR;
     Particle exclusive_LAB = exclusive_TAR;
     Particle pS_LAB = pS_TAR;
-
+    
     if (conditions.getNucleusType() == 45)
       {
 	eS_LAB.boost(boost_TAR_to_PTAR);
 	gammaStar_LAB.boost(boost_TAR_to_PTAR);
 	exclusive_LAB.boost(boost_TAR_to_PTAR);
 	pS_LAB.boost(boost_TAR_to_PTAR);
+	//Now we need to get the fmotion back in for the initial nucleon
+	p_TAR.boost(boost_TAR_to_PTAR);
+	p_LAB=p_TAR;
+	p_LAB.boost(boost_LAB_to_TAR);
       }
-
+    
     eS_LAB.boost(boost_LAB_to_TAR);
     gammaStar_LAB.boost(boost_LAB_to_TAR);
     exclusive_LAB.boost(boost_LAB_to_TAR);
     pS_LAB.boost(boost_LAB_to_TAR);
 
+    Particle gammaStar_LAB_test_with_actual_electron(ParticleType::PHOTON,
+            e_LAB.getFourMomentum() - eS_LAB.getFourMomentum());
+        
     // 12. Store
 
     Event event;
