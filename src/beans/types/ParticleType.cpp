@@ -49,6 +49,9 @@ std::string ParticleType::toString() const {
   case PROTON:
     return "p";
     break;
+  case NEUTRON:
+    return "n";
+    break;
 
   default:
     return "UNDEFINED";
@@ -80,6 +83,8 @@ ParticleType::Type ParticleType::fromString(const std::string &str) {
     type = ParticleType::PI0;
   } else if (strTrimmed == "p") {
     type = ParticleType::PROTON;
+  }else if (strTrimmed == "n") {
+    type = ParticleType::NEUTRON;
   }
 
   return type;
@@ -115,6 +120,9 @@ double ParticleType::getMass() const {
     break;
   case PROTON:
     return PARTONS::Constant::PROTON_MASS;
+    break;
+  case NEUTRON:
+    return 0.9395654205;
     break;
 
   default:
@@ -157,6 +165,9 @@ int ParticleType::getCharge() const {
     break;
   case PROTON:
     return 1;
+    break;
+  case NEUTRON:
+    return 0;
     break;
 
   default:

@@ -184,6 +184,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     }
 
     TVector3 boost_TAR_to_PTAR = p_TAR.getFourMomentum().BoostVector();
+    Particle recoil_LAB;
     // For incoherent pDVCS in D
     if(conditions.getNucleusType() == 45)
       {	
@@ -194,7 +195,11 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
        	ParticleType protonType = ParticleType(protonType.fromString("p"));
 	double mass = protonType.getMass();
 	Particle proton_TRF(protonType, TVector3(px, py, pz), TMath::Sqrt(mass*mass+P*P));
-
+	ParticleType neutronType = ParticleType(protonType.fromString("n"));
+	double neutronMass = neutronType.getMass();
+	Particle recoil_TAR(neutronType, TVector3(-px, -py, -pz), TMath::Sqrt(neutronMass*neutronMass+P*P));
+	recoil_LAB = recoil_TAR;
+        recoil_LAB.boost(boost_LAB_to_TAR);
 	//change the definition of the TRF
 	boost_TAR_to_PTAR = proton_TRF.getFourMomentum().BoostVector();
 	e_TAR.boost(-boost_TAR_to_PTAR);
@@ -432,7 +437,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     Event event;
 
     std::vector<std::pair<ParticleCodeType::Type, std::shared_ptr<Particle> > > particles(
-            6);
+            7);
 
     particles.at(0) = std::make_pair(ParticleCodeType::BEAM,
             std::make_shared<Particle>(e_LAB));
@@ -446,6 +451,8 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
             std::make_shared<Particle>(pS_LAB));
     particles.at(5) = std::make_pair(ParticleCodeType::UNDECAYED,
             std::make_shared<Particle>(exclusive_LAB));
+    particles.at(6) = std::make_pair(ParticleCodeType::UNDECAYED,
+	    std::make_shared<Particle>(recoil_LAB));
 
     event.setParticles(particles);
 
@@ -459,6 +466,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     vertices.at(1) = std::make_shared<Vertex>();
     vertices.at(1)->addParticleIn(particles.at(3).second);
     vertices.at(1)->addParticleIn(particles.at(1).second);
+    vertices.at(1)->addParticleIn(particles.at(6).second);
     vertices.at(1)->addParticleOut(particles.at(5).second);
     vertices.at(1)->addParticleOut(particles.at(4).second);
 
