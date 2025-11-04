@@ -285,10 +285,11 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     //Starting from target rest frame
     Particle gammaStar_GP = gammaStar_TAR;
     Particle p_GP = p_TAR;
+
     //rotation axis = unit vector x z
     TVector3 gammaStar_TAR_normal = gammaStar_TAR.getMomentum().Unit();
     TVector3 zAxis(0, 0, 1);
-    TVector3 axis = gammaStar_TAR_normal.Cross(zAxis);
+    TVector3 axis = zAxis.Cross(gammaStar_TAR_normal);
     double sinAngle = axis.Mag();
     double cosAngle = gammaStar_TAR_normal.Dot(zAxis);
     double angle_TAR_to_GP=0;
@@ -306,7 +307,7 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
       angle_TAR_to_GP = atan2(sinAngle, cosAngle);
       gammaStar_GP.rotate(axis,angle_TAR_to_GP);
       p_GP.rotate(axis,angle_TAR_to_GP);
-    }
+      }
 
     // boost
     TVector3 boost_TAR_to_GP = (gammaStar_GP.getFourMomentum()
@@ -352,8 +353,8 @@ Event DVCSKinematicDefault::evaluate(const ExperimentalConditions &conditions,
     // rotate
     //exclusive_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
     //pS_TAR.rotate(AxisType::Y, angle_TAR_to_GP);
-    exclusive_TAR.rotate(axis,angle_TAR_to_GP);
-    pS_TAR.rotate(axis,angle_TAR_to_GP);
+    exclusive_TAR.rotate(axis,-angle_TAR_to_GP);
+    pS_TAR.rotate(axis,-angle_TAR_to_GP);
     
     // 9. Introduce phi angle
 
